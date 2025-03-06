@@ -38,7 +38,6 @@ const GraphComponent = () => {
   const [isRendererActive, setIsRendererActive] = useState(true);
   const [containerKey, setContainerKey] = useState(0);
 
-  // Set mounted state after initial render
   useEffect(() => {
     setIsMounted(true);
     return () => setIsMounted(false);
@@ -62,7 +61,6 @@ const GraphComponent = () => {
     const camera = rendererRef.current.getCamera();
     const viewportNodes = new Set();
 
-    // Get visible nodes based on camera position
     graphRef.current.forEachNode((node, attributes) => {
       const nodePosition = rendererRef.current.graphToViewport(attributes);
       if (isInViewport(nodePosition, camera)) {
@@ -74,17 +72,14 @@ const GraphComponent = () => {
 
     // Enhanced LOD based on zoom level
     if (camera.ratio > 5) {
-      // Very zoomed out: use clustering
       workerRef.current.postMessage({
         type: "CLUSTER_DATA",
         data: Array.from(viewportNodes).map((id) =>
           graphRef.current.getNodeAttributes(id)
         ),
       });
-      // Hide all labels
       rendererRef.current.setSetting("renderLabels", false);
     } else if (camera.ratio > 2) {
-      // Moderately zoomed out: show clusters but with minimal detail
       rendererRef.current.setSetting("renderLabels", true);
       rendererRef.current.setSetting("labelRenderedSizeThreshold", 15);
       rendererRef.current.setSetting("nodeReducer", (node, data) => ({
@@ -93,7 +88,6 @@ const GraphComponent = () => {
         size: data.size * 0.8,
       }));
     } else {
-      // Zoomed in: show full detail
       rendererRef.current.setSetting("renderLabels", true);
       rendererRef.current.setSetting("labelRenderedSizeThreshold", 8);
       rendererRef.current.setSetting("nodeReducer", (node, data) => ({
@@ -111,13 +105,11 @@ const GraphComponent = () => {
 
     try {
       const node = event.node;
-      if (!node) return; // Guard against undefined node
+      if (!node) return;
 
-      // Get node attributes safely
       const nodeAttributes = graphRef.current.getNodeAttributes(node);
-      if (!nodeAttributes) return; // Guard against missing attributes
+      if (!nodeAttributes) return;
 
-      // Get connected nodes information safely
       const connectedNodes = [];
       try {
         graphRef.current.forEachNeighbor(node, (neighbor, attributes) => {
@@ -132,18 +124,15 @@ const GraphComponent = () => {
         console.error("Error getting neighbors:", error);
       }
 
-      // Set the selected node with complete information
       const selectedNodeInfo = {
         id: node,
         ...nodeAttributes,
         connectedNodes: connectedNodes,
       };
 
-      // Update state
       setSelectedNode(selectedNodeInfo);
       console.log("Selected node info:", selectedNodeInfo);
 
-      // Reset all edges to default color first
       try {
         graphRef.current.forEachEdge((edge) => {
           if (edge) {
@@ -155,7 +144,6 @@ const GraphComponent = () => {
           }
         });
 
-        // Highlight edges connected to the clicked node
         const connectedEdges = graphRef.current.edges(node);
         console.log("Connected edges:", connectedEdges);
 
@@ -172,7 +160,6 @@ const GraphComponent = () => {
         console.error("Error updating edges:", error);
       }
 
-      // Handle cluster expansion if needed
       if (nodeAttributes.isCluster) {
         try {
           graphRef.current.dropNode(node);
@@ -189,7 +176,6 @@ const GraphComponent = () => {
         }
       }
 
-      // Ensure the renderer refreshes
       if (rendererRef.current) {
         rendererRef.current.refresh();
       }
@@ -202,7 +188,6 @@ const GraphComponent = () => {
   const updateClusters = useCallback((clusters) => {
     if (!graphRef.current || !rendererRef.current) return;
 
-    // Update graph with clustered nodes
     graphRef.current.clear();
 
     clusters.nodes.forEach((cluster) => {
@@ -234,11 +219,9 @@ const GraphComponent = () => {
       });
 
       try {
-        // Create new Graph instance
         const graph = new Graph();
         graphRef.current = graph;
 
-        // Add nodes to graph
         data.nodes.forEach((node) => {
           graph.addNode(node.id, {
             x: node.x,
@@ -249,7 +232,6 @@ const GraphComponent = () => {
           });
         });
 
-        // Add edges to graph
         data.edges.forEach((edge) => {
           if (!graph.hasEdge(edge.source, edge.target)) {
             graph.addEdge(edge.source, edge.target, {
@@ -262,7 +244,6 @@ const GraphComponent = () => {
           }
         });
 
-        // Create new Sigma instance
         rendererRef.current = new Sigma(graph, containerRef.current, {
           minCameraRatio: 0.01,
           maxCameraRatio: 200,
@@ -282,11 +263,9 @@ const GraphComponent = () => {
           edgeArrowSize: 6,
         });
 
-        // Add viewport-based rendering and click handling
         rendererRef.current.on("cameraMoved", handleCameraMove);
         rendererRef.current.on("clickNode", handleClick);
 
-        // Center the camera
         const camera = rendererRef.current.getCamera();
         camera.ratio = 1.5;
         camera.angle = 0;
@@ -313,12 +292,12 @@ const GraphComponent = () => {
       switch (type) {
         case "SAMPLED_DATA":
           console.log("Initializing graph with sampled data");
-          setIsRendererActive(true); // Reactivate renderer
+          setIsRendererActive(true);
           initializeGraphDirectly(data);
           break;
         case "CLUSTERED_DATA":
           console.log("Updating clusters");
-          setIsRendererActive(true); // Reactivate renderer
+          setIsRendererActive(true);
           updateClusters(data);
           break;
         default:
@@ -351,7 +330,6 @@ const GraphComponent = () => {
     rendererRef.current.refresh();
   }, []);
 
-  // Add wheel event listener
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -360,7 +338,6 @@ const GraphComponent = () => {
     }
   }, [handleWheel]);
 
-  // Add this handler function
   const handleSampleSettingsChange = useCallback((event) => {
     const { name, value } = event.target;
     setSampleSettings((prev) => ({
@@ -374,10 +351,8 @@ const GraphComponent = () => {
     setIsLoading(true);
     setSelectedNode(null);
 
-    // Force a complete remount of the container by changing its key
     setContainerKey((prev) => prev + 1);
 
-    // Cleanup in next tick after React has processed state updates
     Promise.resolve().then(() => {
       try {
         if (rendererRef.current) {
@@ -406,7 +381,6 @@ const GraphComponent = () => {
     });
   }, [sampleSettings]);
 
-  // Also update the cleanup in the useEffect hook
   useEffect(() => {
     if (!isMounted || !containerRef.current) {
       return;
@@ -420,14 +394,12 @@ const GraphComponent = () => {
       return;
     }
 
-    // For small datasets (less than 1000 nodes), initialize directly
     if (processedData.nodes.length < 1000) {
       console.log("Small dataset detected, initializing directly");
       initializeGraphDirectly(processedData);
       return;
     }
 
-    // For large datasets, use worker
     console.log("Large dataset detected, initializing worker");
     try {
       workerRef.current = new Worker(
@@ -449,15 +421,13 @@ const GraphComponent = () => {
       });
     } catch (error) {
       console.error("Worker initialization failed:", error);
-      // Fallback to direct initialization
       initializeGraphDirectly(processedData);
     }
 
     return () => {
-      setIsRendererActive(false); // Deactivate renderer before cleanup
-      setSelectedNode(null); // Clear selected node
+      setIsRendererActive(false);
+      setSelectedNode(null);
 
-      // Delay cleanup to allow React to update first
       setTimeout(() => {
         try {
           if (rendererRef.current) {

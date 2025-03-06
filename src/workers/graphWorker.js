@@ -1,9 +1,6 @@
-/* eslint-disable no-restricted-globals */
 
-// Make sure we're in a worker context
 const ctx = self;
 
-// Handle messages from the main thread
 ctx.onmessage = async (event) => {
   const { type, data, settings } = event.data;
   console.log("Worker received message:", type, {
@@ -23,7 +20,6 @@ ctx.onmessage = async (event) => {
     return;
   }
 
-  // Validate node data structure
   const isValidNode = (node) => {
     return (
       node &&
@@ -88,21 +84,17 @@ ctx.onmessage = async (event) => {
   }
 };
 
-// Sample nodes based on degree and random selection
 function sampleNodes(nodes, sampleSize, importantPercent) {
   if (nodes.length <= sampleSize) {
     console.log("Data size smaller than sample size, returning all nodes");
     return nodes;
   }
 
-  // Sort nodes by degree (if you have edge data) or size
   const sortedNodes = nodes.sort((a, b) => (b.size || 1) - (a.size || 1));
 
-  // Take top percentage of important nodes
   const importantNodesCount = Math.floor(sampleSize * (importantPercent / 100));
   const importantNodes = sortedNodes.slice(0, importantNodesCount);
 
-  // Randomly sample the rest
   const remainingNodes = sortedNodes.slice(importantNodesCount);
   const randomNodes = [];
   const remainingCount = sampleSize - importantNodesCount;
@@ -118,7 +110,6 @@ function sampleNodes(nodes, sampleSize, importantPercent) {
   return result;
 }
 
-// Grid-based clustering implementation
 function clusterNodes(nodes) {
   const GRID_SIZE = 50;
   const clusters = new Map();
@@ -148,18 +139,14 @@ function clusterNodes(nodes) {
 }
 
 function sampleEdges(edges, sampledNodes, maxEdges = 10000) {
-  // Create a Set of sampled node IDs for faster lookup
   const sampledNodeIds = new Set(sampledNodes.map((n) => n.id));
 
-  // Filter valid edges (those connecting sampled nodes)
   const validEdges = edges.filter(
     (edge) => sampledNodeIds.has(edge.source) && sampledNodeIds.has(edge.target)
   );
 
-  // If we have fewer edges than max, return all valid edges
   if (validEdges.length <= maxEdges) return validEdges;
 
-  // Sort edges by weight/importance if available, or take a random sample
   return validEdges
     .sort((a, b) => (b.weight || 1) - (a.weight || 1))
     .slice(0, maxEdges);
