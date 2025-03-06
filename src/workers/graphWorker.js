@@ -1,4 +1,4 @@
-
+// eslint-disable-next-line no-restricted-globals
 const ctx = self;
 
 ctx.onmessage = async (event) => {
